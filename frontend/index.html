@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document OCR & Analysis</title>
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* กำหนด Font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+        /* สไตล์สำหรับหน้าจอ Loading */
+        .loading-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(255, 255, 255, 0.8); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        /* สไตล์ Spinner */
+        .spinner { 
+            border: 4px solid rgba(0, 0, 0, 0.1); 
+            border-left-color: #10b981; /* Tailwind green-500 equivalent */
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <!-- Loading Overlay (ใช้แสดงขณะรอผลลัพธ์จาก Flask/Gemini API) -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="flex flex-col items-center">
+            <div class="spinner"></div>
+            <p class="mt-4 text-gray-600">กำลังประมวลผลเอกสาร...</p>
+        </div>
+    </div>
+
+    <!-- ส่วนหัว (Header) -->
+    <header class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-gray-800">เครื่องมือวิเคราะห์เอกสาร (OCR & Crop)</h1>
+        <p class="text-gray-500 mt-2">อัปโหลดภาพถ่ายเอกสารเพื่อตัดส่วนที่ไม่จำเป็น ทำ OCR และจัดหมวดหมู่ข้อความ</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto">
+        
+        <!-- พื้นที่อัปโหลดไฟล์ -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <label for="file-upload" class="block text-lg font-semibold mb-3 text-gray-700">อัปโหลดภาพเอกสาร:</label>
+            <input type="file" id="file-upload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer">
+            <button id="process-button" class="mt-5 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-md">
+                ประมวลผลเอกสาร
+            </button>
+            <p id="message-area" class="mt-3 text-red-500 text-sm hidden"></p>
+        </div>
+
+        <!-- พื้นที่แสดงผลลัพธ์ -->
+        <div id="results-container" class="grid md:grid-cols-2 gap-8">
+            
+            <!-- คอลัมน์ซ้าย: ผลลัพธ์ภาพและข้อความดิบ -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-2">ภาพที่ถูกประมวลผล</h2>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <p class="font-medium text-gray-600 mb-2">ภาพต้นฉบับ</p>
+                        <img id="original-preview" class="w-full h-auto rounded-lg shadow-md border-2 border-gray-100 max-h-48 object-contain mx-auto" alt="Original Image Preview" style="display:none;">
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-600 mb-2">ภาพเอกสารที่ตัดแล้ว (Crop)</p>
+                        <img id="cropped-preview" class="w-full h-auto rounded-lg shadow-md border-2 border-green-300 max-h-48 object-contain mx-auto" alt="Cropped Document Preview" style="display:none;">
+                    </div>
+                </div>
+
+                <div id="ocr-raw-container" style="display:none;">
+                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">ข้อความดิบ (OCR Raw Text)</h3>
+                    <pre id="ocr-raw-text" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto h-64"></pre>
+                </div>
+            </div>
+
+            <!-- คอลัมน์ขวา: ข้อมูลที่ถูกจัดโครงสร้างโดย LLM -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-2">ข้อมูลที่ถูกจัดหมวดหมู่ (LLM Analysis)</h2>
+                <div id="structured-output" class="space-y-4">
+                    <p class="text-gray-500">ผลลัพธ์ที่จัดโครงสร้างจะปรากฏที่นี่</p>
+                </div>
+                
+                <div id="json-raw-container" class="mt-8" style="display:none;">
+                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">JSON Structure</h3>
+                    <pre id="json-raw-text" class="bg-gray-50 p-3 rounded-lg text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto h-48"></pre>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const processButton = document.getElementById('process-button');
+        const fileInput = document.getElementById('file-upload');
+        const messageArea = document.getElementById('message-area');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        const originalPreview = document.getElementById('original-preview');
+        const croppedPreview = document.getElementById('cropped-preview');
+        const ocrRawText = document.getElementById('ocr-raw-text');
+        const structuredOutput = document.getElementById('structured-output');
+        const jsonRawText = document.getElementById('json-raw-text');
+
+        // *** แก้ไข API Path ให้ถูกต้องตาม Flask Route ***
+        const API_URL = '/api/upload'; 
+
+        function showLoading(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+            processButton.disabled = show;
+            processButton.textContent = show ? 'กำลังประมวลผล...' : 'ประมวลผลเอกสาร';
+        }
+
+        function displayMessage(text, isError = true) {
+            messageArea.textContent = text;
+            // ใช้ Tailwind classes ใน JS สำหรับการปรับสีข้อความ
+            messageArea.className = `mt-3 text-sm block ${isError ? 'text-red-500' : 'text-green-500'}`;
+        }
+
+        function clearResults() {
+            originalPreview.style.display = 'none';
+            croppedPreview.style.display = 'none';
+            document.getElementById('ocr-raw-container').style.display = 'none';
+            document.getElementById('json-raw-container').style.display = 'none';
+            ocrRawText.textContent = '';
+            jsonRawText.textContent = '';
+            structuredOutput.innerHTML = '<p class="text-gray-500">ผลลัพธ์ที่จัดโครงสร้างจะปรากฏที่นี่</p>';
+        }
+
+        function renderStructuredOutput(sections) {
+            structuredOutput.innerHTML = '';
+            if (!sections || sections.length === 0) {
+                structuredOutput.innerHTML = '<p class="text-yellow-600 bg-yellow-50 p-3 rounded-xl">ไม่พบส่วนข้อมูลที่สามารถจัดโครงสร้างได้ (อาจเกิดจากการประมวลผล AI ล้มเหลว)</p>';
+                return;
+            }
+
+            sections.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'border-l-4 border-green-500 pl-4 bg-green-50 p-4 rounded-xl shadow-sm';
+                
+                const title = document.createElement('h3');
+                title.className = 'text-lg font-bold text-green-700 mb-1';
+                // ใช้ 'name' หรือ 'sectionTitle' เป็นชื่อหัวข้อ
+                title.textContent = item.name || item.sectionTitle || `Field ${index + 1}`; 
+                
+                const content = document.createElement('p');
+                content.className = 'text-gray-700 whitespace-pre-line';
+                // ใช้ 'value' หรือ 'content' เป็นค่าข้อมูล
+                content.textContent = item.value || item.content || '...ไม่มีเนื้อหา...';
+
+                itemDiv.appendChild(title);
+                itemDiv.appendChild(content);
+                structuredOutput.appendChild(itemDiv);
+            });
+        }
+
+        processButton.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            clearResults();
+            displayMessage('', false);
+
+            if (!file) {
+                displayMessage('กรุณาเลือกไฟล์ภาพก่อน');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // แสดงภาพต้นฉบับก่อนส่ง
+            originalPreview.src = URL.createObjectURL(file);
+            originalPreview.style.display = 'block';
+
+            showLoading(true);
+
+            try {
+                // *** ใช้ API_URL ที่แก้ไขแล้ว (/api/upload) ***
+                const response = await fetch(API_URL, { 
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    displayMessage('ประมวลผลสำเร็จ!', false);
+
+                    // แสดงภาพที่ถูก Crop
+                    // การเรียกใช้รูปภาพที่ Flask ส่งกลับมาต้องใช้ Relative Path ที่ถูกต้อง
+                    croppedPreview.src = data.cropped_image; 
+                    croppedPreview.style.display = 'block';
+
+                    // แสดงข้อความดิบ
+                    document.getElementById('ocr-raw-container').style.display = 'block';
+                    ocrRawText.textContent = data.ocr_text || 'OCR ไม่พบข้อความ';
+
+                    // แสดง JSON และผลลัพธ์ที่จัดโครงสร้าง
+                    document.getElementById('json-raw-container').style.display = 'block';
+                    jsonRawText.textContent = JSON.stringify(data.sections, null, 2);
+                    renderStructuredOutput(data.sections);
+
+                } else if (data && data.status === 'warning') {
+                    // กรณี Tesseract/AI มีปัญหา
+                    displayMessage(`เตือน: ${data.message}`, false);
+                    
+                    // ยังแสดงผลลัพธ์ที่ทำได้
+                    if (data.cropped_image) {
+                        croppedPreview.src = data.cropped_image; 
+                        croppedPreview.style.display = 'block';
+                    }
+                    document.getElementById('ocr-raw-container').style.display = 'block';
+                    ocrRawText.textContent = data.ocr_text || 'OCR ไม่พบข้อความ';
+                    
+                    document.getElementById('json-raw-container').style.display = 'block';
+                    jsonRawText.textContent = JSON.stringify(data.sections, null, 2);
+                    renderStructuredOutput(data.sections);
+
+                } else {
+                    // กรณี API ตอบกลับ error
+                    const errorMessage = data.message || data.error || 'เกิดข้อผิดพลาดในการประมวลผล';
+                    displayMessage(`เกิดข้อผิดพลาด: ${errorMessage}`);
+                }
+
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                // ข้อความที่ชัดเจนขึ้น
+                displayMessage('ไม่สามารถเชื่อมต่อกับ Flask Server ได้ (หรือเกิดข้อผิดพลาดเครือข่าย)');
+            } finally {
+                showLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>
