@@ -25,8 +25,6 @@ def process_document_ocr(img_pil_cropped, tesseract_cmd):
     error_message = None
 
     try:
-        # 1. Tesseract OCR Pre-processing
-        # แปลง PIL Image เป็น Grayscale และใช้ Thresholding
         gray = img_pil_cropped.convert("L")
         # แปลงกลับเป็น OpenCV format เพื่อใช้ Thresholding ขั้นสูง (Optional)
         img_np_gray = np.array(gray)

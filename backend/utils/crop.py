@@ -94,7 +94,6 @@ def crop_document(img_np):
                 document_contour = approx
                 break
         
-        # 4. ทำ Perspective Transform หรือ Fallback
         if document_contour is not None:
             # Case A: พบ 4 มุม - ทำ Perspective Transform (Ideal)
             return four_point_transform(img_np, document_contour.reshape(4, 2))
