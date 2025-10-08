@@ -87,7 +87,9 @@
                 </div>
 
                 <div id="ocr-raw-container" style="display:none;">
-                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">ข้อความดิบ (OCR Raw Text)</h3>
+                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">ข้อความดิบ (ข้อจำกัดภาษาไทย )</h3>
+                    <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">⚠️ ข้อจำกัดภาษาไทย (OCR อาจสร้างช่องว่างระหว่างตัวอักษรหรือคำ 
+                        (' ') แต่ระบบวิเคราะห์ข้อมูลจะยังสามารถจัดหมวดหมู่ได้ )</h3>
                     <pre id="ocr-raw-text" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto h-64"></pre>
                 </div>
             </div>
@@ -95,6 +97,7 @@
             <!-- คอลัมน์ขวา: ข้อมูลที่ถูกจัดโครงสร้างโดย LLM -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-2">ข้อมูลที่ถูกจัดหมวดหมู่ (LLM Analysis)</h2>
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-2">ผลลัพธ์ดูแปลกไปสามารถประมวลผลซ้ำได้ (ตรวจเช็คคุณภาพเอกสาร)</h2>
                 <div id="structured-output" class="space-y-4">
                     <p class="text-gray-500">ผลลัพธ์ที่จัดโครงสร้างจะปรากฏที่นี่</p>
                 </div>

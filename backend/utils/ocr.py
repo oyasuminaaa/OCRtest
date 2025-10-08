@@ -25,16 +25,31 @@ def process_document_ocr(img_pil_cropped, tesseract_cmd):
     error_message = None
 
     try:
+        # 1. Tesseract OCR Pre-processing (Based on user's preferred logic)
+        # แปลง PIL Image เป็น Grayscale 
         gray = img_pil_cropped.convert("L")
-        # แปลงกลับเป็น OpenCV format เพื่อใช้ Thresholding ขั้นสูง (Optional)
+        # แปลงเป็น NumPy Array (OpenCV format)
         img_np_gray = np.array(gray)
-        _, binary = cv2.threshold(img_np_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        
+        # ใช้ Binary Thresholding + OTSU
+        _, processed_image = cv2.threshold(img_np_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
         
         # ตั้งค่า Tesseract Command Path (ถูกตั้งใน app.py แล้ว)
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd 
         
-        # ดึงข้อความ (ใช้ lang='tha+eng' เพื่อรองรับภาษาไทย)
-        raw_ocr_text = pytesseract.image_to_string(binary, lang='tha+eng')
+        # ดึงข้อความ (ใช้ lang='tha+eng' และใช้ค่า config เริ่มต้นของ Tesseract)
+        raw_ocr_text = pytesseract.image_to_string(processed_image, lang='tha+eng') 
+        
+        # --- การปรับปรุง: แก้ไขปัญหาการเข้ารหัสและทำความสะอาดข้อความดิบ (สำคัญต่อการแสดงผลภาษาไทย) ---
+        # แก้ไขปัญหา Encoding สำหรับการแสดงผลภาษาไทยใน Windows/Console
+        try:
+            # 1. บังคับ Re-encode เป็น UTF-8 เพื่อแก้ไขปัญหาตัวอักษร "แตก" 
+            raw_ocr_text = raw_ocr_text.encode('utf-8', 'ignore').decode('utf-8')
+            # 2. ทำความสะอาด: ลบตัวอักษรควบคุม (Form Feed \x0c) ที่มาจากการ OCR
+            raw_ocr_text = raw_ocr_text.replace('\x0c', '').strip()
+        except Exception:
+            pass # ใช้ข้อความเดิมหากการเข้ารหัสล้มเหลว
+        # --- สิ้นสุดการปรับปรุง ---
 
     except Exception as e:
         error_message = f"Tesseract OCR failed. Check Tesseract installation/path: {str(e)}"
@@ -99,15 +114,15 @@ def process_document_ocr(img_pil_cropped, tesseract_cmd):
                 
                 if json_string:
                     try:
-                        sections = json.loads(json_string)
+                        sections = json.loads(json_string);
                         return raw_ocr_text, sections, None # Success
                     except json.JSONDecodeError:
-                        error_message = "AI returned text, but it could not be parsed as valid JSON."
-                        print(f"JSON Decode Error: {json_string}")
-                        break
+                        error_message = "AI returned text, but it could not be parsed as valid JSON.";
+                        print(f"JSON Decode Error: {json_string}");
+                        break;
                 else:
-                    error_message = "AI analysis returned no content."
-                    break
+                    error_message = "AI analysis returned no content.";
+                    break;
 
             elif response.status_code == 429:
                 if attempt < max_retries - 1:
@@ -115,15 +130,15 @@ def process_document_ocr(img_pil_cropped, tesseract_cmd):
                     delay *= 2
                     continue
                 else:
-                    error_message = "AI service is busy (Rate Limit Exceeded) after multiple retries."
-                    break
+                    error_message = "AI service is busy (Rate Limit Exceeded) after multiple retries.";
+                    break;
             else:
-                error_message = f"AI API call failed with status code {response.status_code}: {response.text}"
-                break
+                error_message = f"AI API call failed with status code {response.status_code}: {response.text}";
+                break;
         
         return raw_ocr_text, sections, error_message
 
     except Exception as e:
-        error_message = f"Internal error during AI API communication: {str(e)}"
-        print(f"LLM Communication Error: {error_message}")
-        return raw_ocr_text, sections, error_message
+        error_message = f"Internal error during AI API communication: {str(e)}";
+        print(f"LLM Communication Error: {str(e)}");
+        return raw_ocr_text, sections, error_message;
