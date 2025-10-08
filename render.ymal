@@ -9,21 +9,20 @@ services:
     # Environment ของโปรเจกต์คือ Python
     env: python
 
-    # *** (แก้ไข/เพิ่ม) *** กำหนดให้ Root Directory ของ Service นี้คือโฟลเดอร์ 'backend' 
+    # กำหนดให้ Root Directory ของ Service นี้คือโฟลเดอร์ 'backend' 
     # เพื่อให้ Gunicorn สามารถหาไฟล์ app.py ได้
     rootDir: ./backend
 
     # คำสั่ง Build: ติดตั้ง Tesseract และ Python dependencies
     buildCommand: |
-      # ติดตั้ง Tesseract และภาษาไทย
-      apt-get update -y && apt-get install -y tesseract-ocr tesseract-ocr-tha libglib2.0-0 libgl1
-      # ติดตั้ง Python Dependencies
+      # Fix: ใช้เซมิโคลอน (;) เพื่อแยกคำสั่งเชลล์สองชุดออกจากกันอย่างชัดเจน
+      apt-get update -y && apt-get install -y tesseract-ocr tesseract-ocr-tha libglib2.0-0 libgl1;
       pip install -r requirements.txt
     
     # คำสั่ง Start: รัน Flask app ด้วย Gunicorn
     startCommand: gunicorn app:app
     
-    # *** (เพิ่ม) *** พอร์ตที่ Service จะเปิดรับการเชื่อมต่อ
+    # พอร์ตที่ Service จะเปิดรับการเชื่อมต่อ
     port: 8000 
     
     # Environment Variables ที่จำเป็นต้องตั้งค่า (ต้องตั้งค่าด้วยตนเองบน Render Dashboard)
@@ -31,7 +30,6 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
 
-      # *** (แก้ไข: เหลือไว้แค่ Gemini API Key ตามที่คุณต้องการ) ***
+      # ตัวแปรสำหรับ Gemini API Key (ต้องตั้งค่าค่าจริงบน Render Dashboard)
       - key: GEMINI_API_KEY
-        # value: 'AIzaSyB4niyedJwvvofav1ZaUHIwLrbclc3bPPA' (บน Render Dashboard)
         sync: false
