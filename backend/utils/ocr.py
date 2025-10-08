@@ -25,34 +25,42 @@ def process_document_ocr(img_pil_cropped, tesseract_cmd):
     error_message = None
 
     try:
-        # 1. Tesseract OCR Pre-processing (Based on user's preferred logic)
+        # 1. Tesseract OCR Pre-processing
         # แปลง PIL Image เป็น Grayscale 
         gray = img_pil_cropped.convert("L")
         # แปลงเป็น NumPy Array (OpenCV format)
         img_np_gray = np.array(gray)
         
         # ใช้ Binary Thresholding + OTSU
+        # Note: We convert back to PIL Image if the original was PIL, but since 
+        # pytesseract can take numpy array directly, we use the processed numpy image.
         _, processed_image = cv2.threshold(img_np_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
         
-        # ตั้งค่า Tesseract Command Path (ถูกตั้งใน app.py แล้ว)
+        # --- การแก้ไข CRITICAL: บังคับใช้ tesseract_cmd จาก Environment Variable ---
+        # นี่คือการแก้ไขสุดท้าย เพื่อป้องกันไม่ให้ PyTesseract ดึงค่า Path ผิดพลาด (C:\...)
         pytesseract.pytesseract.tesseract_cmd = tesseract_cmd 
+        # --- สิ้นสุดการแก้ไข ---
         
         # ดึงข้อความ (ใช้ lang='tha+eng' และใช้ค่า config เริ่มต้นของ Tesseract)
         raw_ocr_text = pytesseract.image_to_string(processed_image, lang='tha+eng') 
         
-        # --- การปรับปรุง: แก้ไขปัญหาการเข้ารหัสและทำความสะอาดข้อความดิบ (สำคัญต่อการแสดงผลภาษาไทย) ---
-        # แก้ไขปัญหา Encoding สำหรับการแสดงผลภาษาไทยใน Windows/Console
+        # --- การปรับปรุง: ทำความสะอาดข้อความดิบ ---
         try:
-            # 1. บังคับ Re-encode เป็น UTF-8 เพื่อแก้ไขปัญหาตัวอักษร "แตก" 
+            # 1. บังคับ Re-encode เป็น UTF-8
             raw_ocr_text = raw_ocr_text.encode('utf-8', 'ignore').decode('utf-8')
-            # 2. ทำความสะอาด: ลบตัวอักษรควบคุม (Form Feed \x0c) ที่มาจากการ OCR
+            # 2. ลบตัวอักษรควบคุม (Form Feed \x0c)
             raw_ocr_text = raw_ocr_text.replace('\x0c', '').strip()
         except Exception:
-            pass # ใช้ข้อความเดิมหากการเข้ารหัสล้มเหลว
+            pass
         # --- สิ้นสุดการปรับปรุง ---
 
     except Exception as e:
-        error_message = f"Tesseract OCR failed. Check Tesseract installation/path: {str(e)}"
+        # ถ้า Tesseract ล้มเหลวเนื่องจาก Path ให้แสดงข้อความ error ที่ชัดเจน
+        if "No such file or directory" in str(e) or "is not installed" in str(e):
+             error_message = f"Tesseract Path Error: Tesseract command '{pytesseract.pytesseract.tesseract_cmd}' not found. Check APT_INSTALL setting on Render."
+        else:
+            error_message = f"Tesseract OCR failed. Error details: {str(e)}"
+        
         print(f"OCR Error: {error_message}")
         return raw_ocr_text, sections, error_message
 
