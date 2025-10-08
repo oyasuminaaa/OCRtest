@@ -1,27 +1,31 @@
-services:
+# Render Blueprint for Document OCR Backend Service
 
-type: web
-name: ocr-app-backend
-env: python
-repo: https://github.com/starduztx/OCRtest
-branch: main
-buildCommand: "./build.sh"
-startCommand: "gunicorn backend.app:app"
-autoDeploy: true
-buildpacks:
+# Service: Python Web Service (Backend)
+- type: web
+  name: document-ocr-backend
+  env: python
+  # ใส่ System Dependencies (apt packages) ที่นี่ Render จะติดตั้งให้ก่อนเริ่ม Build
+  apt_packages:
+    - tesseract-ocr
+    - tesseract-ocr-tha
+    - libglib2.0-0
+    - libgl1
+  
+  # Build Command จะเหลือแค่การติดตั้ง Python dependencies เท่านั้น
+  buildCommand: |
+    pip install -r requirements.txt
+  
+  # Start Command: เรียกใช้ Gunicorn (หรือ uvicorn) เพื่อรันแอปพลิเคชัน
+  startCommand: |
+    gunicorn --chdir backend app:app
 
-name: apt
-config:
-packages:
-- tesseract-ocr
-- tesseract-ocr-tha
-- libglib2.0-0
-- libgl1
-envVars:
-
-key: PYTHONUNBUFFERED
-value: "1"
-staticFiles:
-
-path: frontend
-urlPrefix: /
+  # Environment variables (ถ้ามี)
+  envVars:
+    - key: PYTHON_VERSION
+      value: 3.13.4
+    # เพิ่ม Environment variables อื่นๆ ที่คุณต้องการ (เช่น API keys)
+    # - key: MY_API_KEY
+    #   value: your_secret_key
+  
+  # Health Check (ถ้ามี)
+  healthCheckPath: /
