@@ -7,7 +7,7 @@ WORKDIR /app
 # ติดตั้ง Tesseract OCR และลบแคชเพื่อลดขนาด image
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # คัดลอกไฟล์ requirements.txt เข้าไปใน container
