@@ -1,33 +1,27 @@
-# นี่คือไฟล์ Render Blueprint (Infrastructure as Code)
-# มันจะสร้าง Web Service บน Render โดยอัตโนมัติเมื่อคุณเชื่อมต่อกับ GitHub
-
 services:
-  - type: web
-    # ชื่อของบริการ
-    name: ocr-flask-app
 
-    # Environment ของโปรเจกต์คือ Python
-    env: python
+type: web
+name: ocr-app-backend
+env: python
+repo: https://github.com/starduztx/OCRtest
+branch: main
+buildCommand: "./build.sh"
+startCommand: "gunicorn backend.app:app"
+autoDeploy: true
+buildpacks:
 
-    # กำหนดให้ Root Directory ของ Service นี้คือโฟลเดอร์ 'backend' 
-    # เพื่อให้ Gunicorn สามารถหาไฟล์ app.py ได้
-    rootDir: ./backend
+name: apt
+config:
+packages:
+- tesseract-ocr
+- tesseract-ocr-tha
+- libglib2.0-0
+- libgl1
+envVars:
 
-    # คำสั่ง Build: ติดตั้ง Tesseract และ Python dependencies
-    # *** เรียกใช้ Script แยกต่างหากเพื่อแก้ปัญหา Read-only file system ***
-    buildCommand: ./render-build.sh
-    
-    # คำสั่ง Start: รัน Flask app ด้วย Gunicorn
-    startCommand: gunicorn app:app
-    
-    # พอร์ตที่ Service จะเปิดรับการเชื่อมต่อ
-    port: 8000 
-    
-    # Environment Variables ที่จำเป็นต้องตั้งค่า (ต้องตั้งค่าด้วยตนเองบน Render Dashboard)
-    envVars:
-      - key: PYTHONUNBUFFERED
-        value: "1"
+key: PYTHONUNBUFFERED
+value: "1"
+staticFiles:
 
-      # ตัวแปรสำหรับ Gemini API Key (ต้องตั้งค่าค่าจริงบน Render Dashboard)
-      - key: GEMINI_API_KEY
-        sync: false
+path: frontend
+urlPrefix: /
