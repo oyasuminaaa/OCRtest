@@ -12,7 +12,7 @@ import numpy as np
 import cv2
 import requests
 
-#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 GEMINI_API_KEY = "AIzaSyB4niyedJwvvofav1ZaUHIwLrbclc3bPPA" 
 GEMINI_MODEL_NAME = "gemini-2.5-flash-preview-05-20"
