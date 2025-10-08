@@ -23,4 +23,4 @@ COPY ./frontend ./frontend
 
 # กำหนดคำสั่งสำหรับรันแอปพลิเคชัน
 # Render จะกำหนดค่า PORT ให้อัตโนมัติ เราจึงใช้ $PORT ที่นี่
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "backend.app:app"]
+CMD gunicorn --bind 0.0.0.0:$PORT backend.app:app
