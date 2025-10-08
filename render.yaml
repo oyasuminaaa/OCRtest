@@ -4,7 +4,7 @@
 services:
   - type: web
     # ชื่อของบริการ
-    name: ocr-flask-app # ชื่อบริการตามที่คุณเสนอ
+    name: ocr-flask-app
 
     # Environment ของโปรเจกต์คือ Python
     env: python
@@ -14,10 +14,8 @@ services:
     rootDir: ./backend
 
     # คำสั่ง Build: ติดตั้ง Tesseract และ Python dependencies
-    buildCommand: |
-      # Fix: ใช้เซมิโคลอน (;) เพื่อแยกคำสั่งเชลล์สองชุดออกจากกันอย่างชัดเจน
-      apt-get update -y && apt-get install -y tesseract-ocr tesseract-ocr-tha libglib2.0-0 libgl1;
-      pip install -r requirements.txt
+    # *** เรียกใช้ Script แยกต่างหากเพื่อแก้ปัญหา Read-only file system ***
+    buildCommand: ./render-build.sh
     
     # คำสั่ง Start: รัน Flask app ด้วย Gunicorn
     startCommand: gunicorn app:app
