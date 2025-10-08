@@ -19,9 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # คัดลอกโค้ดของแอปพลิเคชันทั้งหมดเข้าไป
 COPY ./backend ./backend
 COPY ./frontend ./frontend
-
-# ไม่ต้องใช้ build.sh อีกต่อไป สามารถลบไฟล์นี้ทิ้งได้
-# COPY build.sh . 
+COPY start.sh . 
 
 # กำหนดคำสั่งสำหรับรันแอปพลิเคชัน
 # Render จะกำหนดค่า PORT ให้อัตโนมัติ เราจึงใช้ $PORT ที่นี่
